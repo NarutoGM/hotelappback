@@ -210,6 +210,7 @@ export class RoomsService {
         bedType: dto.bedType || '1 Cama Queen',
         surfaceAreaM2: dto.surfaceAreaM2 || 28,
         amenitiesCsv: dto.amenitiesCsv || 'Wi-Fi;Baño Privado;Smart TV',
+        imageUrl: dto.imageUrl || null,
       },
     });
   }
@@ -264,6 +265,34 @@ export class RoomsService {
         { floor: 'asc' },
         { roomNumber: 'asc' },
       ],
+    });
+  }
+
+  /**
+   * Sube una imagen a Firebase Storage y actualiza la URL en la habitación
+   */
+  async uploadRoomImage(id: string, fileBuffer: Buffer, mimeType: string, originalName: string) {
+    const room = await this.prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!room) {
+      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+    }
+
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { storage } = await import('../common/firebase.config.js');
+
+    const extension = originalName.split('.').pop() || 'jpg';
+    const filename = `rooms/${id}_${Date.now()}.${extension}`;
+    const storageRef = ref(storage, filename);
+
+    await uploadBytes(storageRef, fileBuffer, { contentType: mimeType });
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    return this.prisma.room.update({
+      where: { id },
+      data: { imageUrl: downloadUrl },
     });
   }
 }

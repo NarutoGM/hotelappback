@@ -51,6 +51,7 @@ model Room {
   rating         Float     @default(4.8)
   reviewsCount   Int       @default(50)
   amenitiesCsv   String    @default("Wi-Fi;Baño Privado;TV")
+  imageUrl       String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   bookings       Booking[]

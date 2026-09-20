@@ -34,6 +34,7 @@ export interface CreateRoomDto {
   bedType?: string;
   surfaceAreaM2?: number;
   amenitiesCsv?: string;
+  imageUrl?: string;
 }
 
 export interface UpdateRoomDto {
@@ -48,6 +49,7 @@ export interface UpdateRoomDto {
   bedType?: string;
   surfaceAreaM2?: number;
   amenitiesCsv?: string;
+  imageUrl?: string;
 }
 
 export interface ToggleRoomAvailabilityDto {

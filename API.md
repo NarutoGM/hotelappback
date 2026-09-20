@@ -157,10 +157,36 @@ Crea una nueva reserva validando que la capacidad solicitada no exceda la capaci
   "guestsCount": 2,
   "status": "CONFIRMED",
   "totalAmount": 1140.0
+---
+
+### `POST /rooms/:id/image`
+Sube una foto de la habitación directamente a Firebase Storage (`banco-de-imagenes-eaffd.firebasestorage.app`) y actualiza el campo `imageUrl` en la base de datos PostgreSQL Neon.
+- Formato: `multipart/form-data`
+- Campo de archivo: `file`
+
+#### Respuesta Exitosa (`201 Created`)
+```json
+{
+  "id": "room_deluxe_704",
+  "roomNumber": "704",
+  "title": "Habitación Deluxe Vista al Mar",
+  "imageUrl": "https://firebasestorage.googleapis.com/v0/b/banco-de-imagenes-eaffd.firebasestorage.app/o/rooms%2Froom_deluxe_704_1789918000.jpg?alt=media&token=..."
 }
 ```
 
 ---
+
+### `PATCH /rooms/:id`
+Actualiza datos de la habitación (título, precio, piso, capacidad, imageUrl, etc.).
+
+#### Payload Request (Ejemplo)
+```json
+{
+  "pricePerNight": 420.0,
+  "floor": 4,
+  "imageUrl": "https://firebasestorage.googleapis.com/v0/b/..."
+}
+```
 
 
 ## 2. 🔐 Autenticación y Usuarios

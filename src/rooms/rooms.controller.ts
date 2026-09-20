@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, Query, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Query, Param, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service.js';
 import type { CreateBookingDto, CreateRoomDto, UpdateRoomDto, ToggleRoomAvailabilityDto } from './dto/rooms.dto.js';
 
@@ -78,6 +79,27 @@ export class RoomsController {
   @Patch(':id')
   async updateRoom(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
     return this.roomsService.updateRoom(id, dto);
+  }
+
+  /**
+   * POST /rooms/:id/image
+   * Sube una imagen a Firebase Storage para la habitación y actualiza su imageUrl
+   */
+  @Post(':id/image')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadRoomImage(
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Debe proporcionar un archivo de imagen en el campo "file".');
+    }
+    return this.roomsService.uploadRoomImage(
+      id,
+      file.buffer,
+      file.mimetype,
+      file.originalname,
+    );
   }
 
   @Post('book')
