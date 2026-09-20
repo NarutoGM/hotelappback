@@ -334,5 +334,71 @@ export class RoomsService {
       data: { imageUrl: downloadUrl },
     });
   }
+
+  /**
+   * Sube la captura del voucher de pago a Firebase Storage y actualiza la reserva
+   */
+  async uploadBookingVoucher(id: string, fileBuffer: Buffer, mimeType: string, originalName: string) {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        OR: [
+          { id },
+          { bookingId: id },
+        ],
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
+    }
+
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { storage } = await import('../common/firebase.config.js');
+
+    const extension = originalName.split('.').pop() || 'jpg';
+    const filename = `vouchers/${booking.bookingId}_${Date.now()}.${extension}`;
+    const storageRef = ref(storage, filename);
+
+    await uploadBytes(storageRef, fileBuffer, { contentType: mimeType });
+    const downloadUrl = await getDownloadURL(storageRef);
+
+    return this.prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        voucherFileName: downloadUrl,
+        status: 'PENDING',
+      },
+      include: {
+        room: true,
+      },
+    });
+  }
+
+  /**
+   * Actualiza el estado de una reserva (CONFIRMED, REJECTED, CHECKED_IN, CHECKED_OUT, CANCELLED)
+   */
+  async updateBookingStatus(id: string, status: any) {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        OR: [
+          { id },
+          { bookingId: id },
+        ],
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException(`Reserva no encontrada.`);
+    }
+
+    return this.prisma.booking.update({
+      where: { id: booking.id },
+      data: { status },
+      include: {
+        room: true,
+      },
+    });
+  }
 }
+
 

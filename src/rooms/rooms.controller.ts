@@ -120,5 +120,38 @@ export class RoomsController {
   async getBookings(@Query('userId') userId?: string) {
     return this.roomsService.getBookings(userId);
   }
+
+  /**
+   * POST /rooms/bookings/:id/voucher
+   * Sube la captura del voucher a Firebase Storage para una reserva
+   */
+  @Post('bookings/:id/voucher')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadBookingVoucher(
+    @Param('id') id: string,
+    @UploadedFile() file: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Debe proporcionar un archivo de imagen en el campo "file".');
+    }
+    return this.roomsService.uploadBookingVoucher(
+      id,
+      file.buffer,
+      file.mimetype,
+      file.originalname,
+    );
+  }
+
+  /**
+   * PATCH /rooms/bookings/:id/status
+   */
+  @Patch('bookings/:id/status')
+  async updateBookingStatus(
+    @Param('id') id: string,
+    @Body('status') status: any,
+  ) {
+    return this.roomsService.updateBookingStatus(id, status);
+  }
 }
+
 
