@@ -1,4 +1,6 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../common/firebase.config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SearchRoomsQueryDto, CreateBookingDto, CreateRoomDto, UpdateRoomDto } from './dto/rooms.dto.js';
 
@@ -319,14 +321,12 @@ export class RoomsService {
       throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
     }
 
-    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    const { storage } = await import('../common/firebase.config.js');
-
-    const extension = originalName.split('.').pop() || 'jpg';
+    const extension = originalName?.split('.')?.pop() || 'jpg';
     const filename = `rooms/${id}_${Date.now()}.${extension}`;
     const storageRef = ref(storage, filename);
 
-    await uploadBytes(storageRef, fileBuffer, { contentType: mimeType });
+    const bufferData = new Uint8Array(fileBuffer);
+    await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
     const downloadUrl = await getDownloadURL(storageRef);
 
     return this.prisma.room.update({
@@ -352,14 +352,12 @@ export class RoomsService {
       throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
     }
 
-    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-    const { storage } = await import('../common/firebase.config.js');
-
-    const extension = originalName.split('.').pop() || 'jpg';
+    const extension = originalName?.split('.')?.pop() || 'jpg';
     const filename = `vouchers/${booking.bookingId}_${Date.now()}.${extension}`;
     const storageRef = ref(storage, filename);
 
-    await uploadBytes(storageRef, fileBuffer, { contentType: mimeType });
+    const bufferData = new Uint8Array(fileBuffer);
+    await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
     const downloadUrl = await getDownloadURL(storageRef);
 
     return this.prisma.booking.update({
