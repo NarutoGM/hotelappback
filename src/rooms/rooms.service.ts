@@ -313,63 +313,88 @@ export class RoomsService {
    * Sube una imagen a Firebase Storage y actualiza la URL en la habitación
    */
   async uploadRoomImage(id: string, fileBuffer: Buffer, mimeType: string, originalName: string) {
-    const room = await this.prisma.room.findUnique({
-      where: { id },
-    });
+    try {
+      console.log(`[UploadRoomImage] Iniciando subida para room ID: ${id}, archivo: ${originalName}, mime: ${mimeType}, size: ${fileBuffer?.length} bytes`);
+      
+      const room = await this.prisma.room.findUnique({
+        where: { id },
+      });
 
-    if (!room) {
-      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+      if (!room) {
+        throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+      }
+
+      const extension = originalName?.split('.')?.pop() || 'jpg';
+      const filename = `rooms/${id}_${Date.now()}.${extension}`;
+      console.log(`[UploadRoomImage] Generando referencia en Firebase: ${filename}`);
+      const storageRef = ref(storage, filename);
+
+      const bufferData = new Uint8Array(fileBuffer);
+      console.log(`[UploadRoomImage] Subiendo bytes a Firebase Storage...`);
+      const uploadResult = await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
+      console.log(`[UploadRoomImage] Upload exitoso, obteniendo download URL...`, uploadResult.metadata?.fullPath);
+      
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log(`[UploadRoomImage] URL obtenida: ${downloadUrl}`);
+
+      const updated = await this.prisma.room.update({
+        where: { id },
+        data: { imageUrl: downloadUrl },
+      });
+      console.log(`[UploadRoomImage] Habitación actualizada exitosamente en BD.`);
+      return updated;
+    } catch (err: any) {
+      console.error(`[UploadRoomImage ERROR] Error subiendo imagen a Firebase:`, err);
+      throw new BadRequestException(`Error en Firebase Storage: ${err?.message || err}`);
     }
-
-    const extension = originalName?.split('.')?.pop() || 'jpg';
-    const filename = `rooms/${id}_${Date.now()}.${extension}`;
-    const storageRef = ref(storage, filename);
-
-    const bufferData = new Uint8Array(fileBuffer);
-    await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
-    const downloadUrl = await getDownloadURL(storageRef);
-
-    return this.prisma.room.update({
-      where: { id },
-      data: { imageUrl: downloadUrl },
-    });
   }
 
   /**
    * Sube la captura del voucher de pago a Firebase Storage y actualiza la reserva
    */
   async uploadBookingVoucher(id: string, fileBuffer: Buffer, mimeType: string, originalName: string) {
-    const booking = await this.prisma.booking.findFirst({
-      where: {
-        OR: [
-          { id },
-          { bookingId: id },
-        ],
-      },
-    });
+    try {
+      console.log(`[UploadVoucher] Iniciando subida voucher para booking ID: ${id}, archivo: ${originalName}, size: ${fileBuffer?.length} bytes`);
 
-    if (!booking) {
-      throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
+      const booking = await this.prisma.booking.findFirst({
+        where: {
+          OR: [
+            { id },
+            { bookingId: id },
+          ],
+        },
+      });
+
+      if (!booking) {
+        throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
+      }
+
+      const extension = originalName?.split('.')?.pop() || 'jpg';
+      const filename = `vouchers/${booking.bookingId}_${Date.now()}.${extension}`;
+      console.log(`[UploadVoucher] Generando referencia en Firebase: ${filename}`);
+      const storageRef = ref(storage, filename);
+
+      const bufferData = new Uint8Array(fileBuffer);
+      await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
+      const downloadUrl = await getDownloadURL(storageRef);
+      console.log(`[UploadVoucher] URL obtenida: ${downloadUrl}`);
+
+      const updated = await this.prisma.booking.update({
+        where: { id: booking.id },
+        data: {
+          voucherFileName: downloadUrl,
+          status: 'PENDING',
+        },
+        include: {
+          room: true,
+        },
+      });
+      console.log(`[UploadVoucher] Reserva actualizada exitosamente.`);
+      return updated;
+    } catch (err: any) {
+      console.error(`[UploadVoucher ERROR] Error subiendo voucher a Firebase:`, err);
+      throw new BadRequestException(`Error en Firebase Storage: ${err?.message || err}`);
     }
-
-    const extension = originalName?.split('.')?.pop() || 'jpg';
-    const filename = `vouchers/${booking.bookingId}_${Date.now()}.${extension}`;
-    const storageRef = ref(storage, filename);
-
-    const bufferData = new Uint8Array(fileBuffer);
-    await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
-    const downloadUrl = await getDownloadURL(storageRef);
-
-    return this.prisma.booking.update({
-      where: { id: booking.id },
-      data: {
-        voucherFileName: downloadUrl,
-        status: 'PENDING',
-      },
-      include: {
-        room: true,
-      },
-    });
   }
 
   /**
