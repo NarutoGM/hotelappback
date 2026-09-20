@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { SearchRoomsQueryDto, CreateBookingDto } from './dto/rooms.dto.js';
+import { SearchRoomsQueryDto, CreateBookingDto, CreateRoomDto, UpdateRoomDto } from './dto/rooms.dto.js';
 
 @Injectable()
 export class RoomsService {
@@ -180,6 +180,90 @@ export class RoomsService {
       orderBy: {
         createdAt: 'desc',
       },
+    });
+  }
+
+  /**
+   * Crear una nueva habitación (Admin / Recepción)
+   */
+  async createRoom(dto: CreateRoomDto) {
+    const id = dto.id || `RM-${dto.roomNumber}`;
+
+    const existing = await this.prisma.room.findUnique({
+      where: { id },
+    });
+    if (existing) {
+      throw new ConflictException(`Ya existe una habitación con ID o número ${id}`);
+    }
+
+    return this.prisma.room.create({
+      data: {
+        id,
+        roomNumber: dto.roomNumber,
+        title: dto.title,
+        subtitle: dto.subtitle || `Piso ${dto.floor} · Confort Aura`,
+        type: dto.type,
+        floor: dto.floor,
+        capacity: dto.capacity || 2,
+        pricePerNight: dto.pricePerNight,
+        isAvailable: dto.isAvailable !== undefined ? dto.isAvailable : true,
+        bedType: dto.bedType || '1 Cama Queen',
+        surfaceAreaM2: dto.surfaceAreaM2 || 28,
+        amenitiesCsv: dto.amenitiesCsv || 'Wi-Fi;Baño Privado;Smart TV',
+      },
+    });
+  }
+
+  /**
+   * Activar o desactivar una habitación (Admin / Recepción)
+   * Si no se envía isAvailable en el body, simplemente invierte el estado actual (toggle).
+   */
+  async toggleRoomAvailability(id: string, isAvailable?: boolean) {
+    const room = await this.prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!room) {
+      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+    }
+
+    const nextState = isAvailable !== undefined ? isAvailable : !room.isAvailable;
+
+    return this.prisma.room.update({
+      where: { id },
+      data: { isAvailable: nextState },
+    });
+  }
+
+  /**
+   * Modificar datos de una habitación (Admin / Recepción)
+   */
+  async updateRoom(id: string, dto: UpdateRoomDto) {
+    const room = await this.prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!room) {
+      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+    }
+
+    return this.prisma.room.update({
+      where: { id },
+      data: {
+        ...dto,
+      },
+    });
+  }
+
+  /**
+   * Listar todas las habitaciones sin filtros (para gestión de administración/recepción)
+   */
+  async getAllRoomsForAdmin() {
+    return this.prisma.room.findMany({
+      orderBy: [
+        { floor: 'asc' },
+        { roomNumber: 'asc' },
+      ],
     });
   }
 }

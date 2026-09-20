@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Body, Query, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Query, Param } from '@nestjs/common';
 import { RoomsService } from './rooms.service.js';
-import type { CreateBookingDto } from './dto/rooms.dto.js';
+import type { CreateBookingDto, CreateRoomDto, UpdateRoomDto, ToggleRoomAvailabilityDto } from './dto/rooms.dto.js';
 
 @Controller('rooms')
 export class RoomsController {
@@ -24,6 +24,15 @@ export class RoomsController {
   }
 
   /**
+   * GET /rooms/all
+   * Lista todas las habitaciones del hotel con su estado (para Admin / Recepción)
+   */
+  @Get('admin/all')
+  async getAllRoomsForAdmin() {
+    return this.roomsService.getAllRoomsForAdmin();
+  }
+
+  /**
    * GET /rooms/calendar?startDate=2026-09-20&endDate=2026-10-20
    * Vista de Calendario / Matriz para Recepción
    */
@@ -40,6 +49,36 @@ export class RoomsController {
     return this.roomsService.getRoomById(id);
   }
 
+  /**
+   * POST /rooms
+   * Crear una nueva habitación (Admin / Recepción)
+   */
+  @Post()
+  async createRoom(@Body() dto: CreateRoomDto) {
+    return this.roomsService.createRoom(dto);
+  }
+
+  /**
+   * PATCH /rooms/:id/toggle
+   * Activar o desactivar una habitación (Admin / Recepción)
+   * Body opcional: { "isAvailable": true | false } (si no se envía, invierte el estado)
+   */
+  @Patch(':id/toggle')
+  async toggleRoomAvailability(
+    @Param('id') id: string,
+    @Body() dto?: ToggleRoomAvailabilityDto,
+  ) {
+    return this.roomsService.toggleRoomAvailability(id, dto?.isAvailable);
+  }
+
+  /**
+   * PATCH /rooms/:id
+   * Actualizar campos de una habitación (Admin / Recepción)
+   */
+  @Patch(':id')
+  async updateRoom(@Param('id') id: string, @Body() dto: UpdateRoomDto) {
+    return this.roomsService.updateRoom(id, dto);
+  }
 
   @Post('book')
   async createBooking(@Body() dto: CreateBookingDto) {
@@ -51,3 +90,4 @@ export class RoomsController {
     return this.roomsService.getBookings(userId);
   }
 }
+
