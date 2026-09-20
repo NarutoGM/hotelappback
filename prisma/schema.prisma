@@ -40,7 +40,6 @@ model Room {
   id             String    @id
   roomNumber     String
   title          String
-  subtitle       String
   type           String
   floor          Int
   capacity       Int       @default(2) // Capacidad de personas (1 a 6)
@@ -50,7 +49,6 @@ model Room {
   surfaceAreaM2  Int       @default(28)
   rating         Float     @default(4.8)
   reviewsCount   Int       @default(50)
-  amenitiesCsv   String    @default("Wi-Fi;Baño Privado;TV")
   imageUrl       String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt

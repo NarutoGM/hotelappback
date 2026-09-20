@@ -201,7 +201,6 @@ export class RoomsService {
         id,
         roomNumber: dto.roomNumber,
         title: dto.title,
-        subtitle: dto.subtitle || `Piso ${dto.floor} · Confort Aura`,
         type: dto.type,
         floor: dto.floor,
         capacity: dto.capacity || 2,
@@ -209,7 +208,6 @@ export class RoomsService {
         isAvailable: dto.isAvailable !== undefined ? dto.isAvailable : true,
         bedType: dto.bedType || '1 Cama Queen',
         surfaceAreaM2: dto.surfaceAreaM2 || 28,
-        amenitiesCsv: dto.amenitiesCsv || 'Wi-Fi;Baño Privado;Smart TV',
         imageUrl: dto.imageUrl || null,
       },
     });

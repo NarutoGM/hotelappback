@@ -25,7 +25,6 @@ export interface CreateRoomDto {
   id?: string;
   roomNumber: string;
   title: string;
-  subtitle?: string;
   type: string;
   floor: number;
   capacity?: number;
@@ -33,14 +32,12 @@ export interface CreateRoomDto {
   isAvailable?: boolean;
   bedType?: string;
   surfaceAreaM2?: number;
-  amenitiesCsv?: string;
   imageUrl?: string;
 }
 
 export interface UpdateRoomDto {
   roomNumber?: string;
   title?: string;
-  subtitle?: string;
   type?: string;
   floor?: number;
   capacity?: number;
@@ -48,7 +45,6 @@ export interface UpdateRoomDto {
   isAvailable?: boolean;
   bedType?: string;
   surfaceAreaM2?: number;
-  amenitiesCsv?: string;
   imageUrl?: string;
 }
 
