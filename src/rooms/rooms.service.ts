@@ -267,6 +267,47 @@ export class RoomsService {
   }
 
   /**
+   * Eliminar una habitación.
+   * Regla de negocio: Solo se permite eliminar si la habitación está inhabilitada (isAvailable === false).
+   */
+  async deleteRoom(id: string) {
+    const room = await this.prisma.room.findUnique({
+      where: { id },
+      include: {
+        bookings: {
+          where: {
+            status: { in: ['CONFIRMED', 'PENDING', 'CHECKED_IN'] },
+          },
+        },
+      },
+    });
+
+    if (!room) {
+      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+    }
+
+    if (room.isAvailable) {
+      throw new BadRequestException(
+        'No se puede eliminar una habitación activa. Debe inhabilitarla/desactivarla primero.'
+      );
+    }
+
+    if (room.bookings.length > 0) {
+      throw new BadRequestException(
+        `No se puede eliminar la habitación porque tiene ${room.bookings.length} reserva(s) activa(s).`
+      );
+    }
+
+    await this.prisma.booking.deleteMany({
+      where: { roomId: id },
+    });
+
+    return this.prisma.room.delete({
+      where: { id },
+    });
+  }
+
+  /**
    * Sube una imagen a Firebase Storage y actualiza la URL en la habitación
    */
   async uploadRoomImage(id: string, fileBuffer: Buffer, mimeType: string, originalName: string) {

@@ -176,17 +176,22 @@ Sube una foto de la habitación directamente a Firebase Storage (`banco-de-image
 
 ---
 
-### `PATCH /rooms/:id`
-Actualiza datos de la habitación (título, precio, piso, capacidad, imageUrl, etc.).
+### `DELETE /rooms/:id`
+Elimina una habitación del hotel.
+- **Regla de negocio estricta:** Solo se permite eliminar si la habitación está **inhabilitada** (`isAvailable: false`) y no tiene reservas activas (`CONFIRMED`, `PENDING`, `CHECKED_IN`).
+- Si la habitación está activa (`isAvailable: true`), el backend devuelve `400 Bad Request`:
+  > *"No se puede eliminar una habitación activa. Debe inhabilitarla/desactivarla primero."*
 
-#### Payload Request (Ejemplo)
+#### Respuesta Exitosa (`200 OK`)
 ```json
 {
-  "pricePerNight": 420.0,
-  "floor": 4,
-  "imageUrl": "https://firebasestorage.googleapis.com/v0/b/..."
+  "id": "RM-999",
+  "roomNumber": "999",
+  "title": "Habitación Eliminada"
 }
 ```
+
+---
 
 
 ## 2. 🔐 Autenticación y Usuarios

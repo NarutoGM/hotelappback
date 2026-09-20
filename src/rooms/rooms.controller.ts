@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Query, Param, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Query, Param, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service.js';
 import type { CreateBookingDto, CreateRoomDto, UpdateRoomDto, ToggleRoomAvailabilityDto } from './dto/rooms.dto.js';
@@ -100,6 +100,15 @@ export class RoomsController {
       file.mimetype,
       file.originalname,
     );
+  }
+
+  /**
+   * DELETE /rooms/:id
+   * Elimina una habitación (Solo si está inhabilitada y sin reservas activas)
+   */
+  @Delete(':id')
+  async deleteRoom(@Param('id') id: string) {
+    return this.roomsService.deleteRoom(id);
   }
 
   @Post('book')
