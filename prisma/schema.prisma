@@ -1,0 +1,78 @@
+// Prisma schema file for Aura Hotel
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  GUEST
+  RECEPTIONIST
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  salt           String
+  fullName       String
+  documentNumber String    @default("N/A")
+  role           Role      @default(GUEST)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  bookings       Booking[]
+}
+
+model Room {
+  id             String    @id
+  roomNumber     String
+  title          String
+  subtitle       String
+  type           String
+  floor          Int
+  capacity       Int       @default(2) // Capacidad de personas (1 a 6)
+  pricePerNight  Float
+  isAvailable    Boolean   @default(true)
+  bedType        String
+  surfaceAreaM2  Int       @default(28)
+  rating         Float     @default(4.8)
+  reviewsCount   Int       @default(50)
+  amenitiesCsv   String    @default("Wi-Fi;Baño Privado;TV")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  bookings       Booking[]
+}
+
+model Booking {
+  id                  String        @id @default(cuid())
+  bookingId           String        @unique // Ej: AG-94821
+  roomId              String
+  room                Room          @relation(fields: [roomId], references: [id])
+  userId              String?
+  user                User?         @relation(fields: [userId], references: [id])
+  guestName           String
+  guestEmail          String
+  checkInDate         String        // Formato ISO: YYYY-MM-DD
+  checkOutDate        String        // Formato ISO: YYYY-MM-DD
+  nights              Int
+  guestsCount         Int           @default(2)
+  status              BookingStatus @default(PENDING)
+  totalAmount         Float
+  voucherFileName     String?
+  voucherSecurityCode String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
