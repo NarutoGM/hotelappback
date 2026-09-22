@@ -564,6 +564,42 @@ export class RoomsService {
       },
     });
   }
+
+  /**
+   * Actualiza los datos del huésped o de la reserva (guestName, guestEmail, guestsCount, status)
+   */
+  async updateBookingDetails(id: string, dto: { guestName?: string; guestEmail?: string; guestsCount?: number; status?: any }) {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        OR: [
+          { id },
+          { bookingId: id },
+        ],
+      },
+      include: { room: true },
+    });
+
+    if (!booking) {
+      throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
+    }
+
+    if (dto.guestsCount && booking.room && dto.guestsCount > booking.room.capacity) {
+      throw new BadRequestException(`La capacidad máxima de la habitación es de ${booking.room.capacity} personas.`);
+    }
+
+    return this.prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        ...(dto.guestName ? { guestName: dto.guestName.trim() } : {}),
+        ...(dto.guestEmail ? { guestEmail: dto.guestEmail.trim() } : {}),
+        ...(dto.guestsCount ? { guestsCount: dto.guestsCount } : {}),
+        ...(dto.status ? { status: dto.status } : {}),
+      },
+      include: {
+        room: true,
+      },
+    });
+  }
 }
 
 

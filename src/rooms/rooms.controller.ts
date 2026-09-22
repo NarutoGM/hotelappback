@@ -186,6 +186,18 @@ export class RoomsController {
   ) {
     return this.roomsService.updateBookingStatus(id, status);
   }
+
+  /**
+   * PATCH /rooms/bookings/:id
+   * Permite editar datos del huésped o de la reserva
+   */
+  @Patch('bookings/:id')
+  async updateBookingDetails(
+    @Param('id') id: string,
+    @Body() dto: { guestName?: string; guestEmail?: string; guestsCount?: number; status?: any },
+  ) {
+    return this.roomsService.updateBookingDetails(id, dto);
+  }
 }
 
 
