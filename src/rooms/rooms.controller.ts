@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Body, Query, Param, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { RoomsService } from './rooms.service.js';
-import type { CreateBookingDto, CreateRoomDto, UpdateRoomDto, ToggleRoomAvailabilityDto } from './dto/rooms.dto.js';
+import type { CreateBookingDto, CreateRoomDto, UpdateRoomDto, ToggleRoomAvailabilityDto, ToggleMaintenanceDto } from './dto/rooms.dto.js';
 
 @Controller('rooms')
 export class RoomsController {
@@ -70,6 +70,18 @@ export class RoomsController {
     @Body() dto?: ToggleRoomAvailabilityDto,
   ) {
     return this.roomsService.toggleRoomAvailability(id, dto?.isAvailable);
+  }
+
+  /**
+   * PATCH /rooms/:id/maintenance
+   * Alternar estado de mantenimiento de una habitación (Admin / Recepción)
+   */
+  @Patch(':id/maintenance')
+  async toggleRoomMaintenance(
+    @Param('id') id: string,
+    @Body() dto?: ToggleMaintenanceDto,
+  ) {
+    return this.roomsService.toggleRoomMaintenance(id, dto?.isUnderMaintenance);
   }
 
   /**

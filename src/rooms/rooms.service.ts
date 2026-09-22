@@ -57,6 +57,7 @@ export class RoomsService {
     const rooms = await this.prisma.room.findMany({
       where: {
         isAvailable: true,
+        isUnderMaintenance: false,
         capacity: {
           gte: minCapacity,
         },
@@ -246,6 +247,7 @@ export class RoomsService {
         capacity: dto.capacity || 2,
         pricePerNight: dto.pricePerNight,
         isAvailable: dto.isAvailable !== undefined ? dto.isAvailable : true,
+        isUnderMaintenance: dto.isUnderMaintenance !== undefined ? dto.isUnderMaintenance : false,
         bedType: dto.bedType || '1 Cama Queen',
         surfaceAreaM2: dto.surfaceAreaM2 || 28,
         imageUrl: dto.imageUrl || null,
@@ -271,6 +273,27 @@ export class RoomsService {
     return this.prisma.room.update({
       where: { id },
       data: { isAvailable: nextState },
+    });
+  }
+
+  /**
+   * Alternar estado de Mantenimiento de una habitación (Admin / Recepción)
+   */
+  async toggleRoomMaintenance(id: string, isUnderMaintenance?: boolean) {
+    const room = await this.prisma.room.findUnique({
+      where: { id },
+    });
+
+    if (!room) {
+      throw new BadRequestException(`Habitación con ID ${id} no encontrada.`);
+    }
+
+    const nextState =
+      isUnderMaintenance !== undefined ? isUnderMaintenance : !room.isUnderMaintenance;
+
+    return this.prisma.room.update({
+      where: { id },
+      data: { isUnderMaintenance: nextState },
     });
   }
 

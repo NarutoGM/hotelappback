@@ -30,6 +30,7 @@ export interface CreateRoomDto {
   capacity?: number;
   pricePerNight: number;
   isAvailable?: boolean;
+  isUnderMaintenance?: boolean;
   bedType?: string;
   surfaceAreaM2?: number;
   imageUrl?: string;
@@ -43,6 +44,7 @@ export interface UpdateRoomDto {
   capacity?: number;
   pricePerNight?: number;
   isAvailable?: boolean;
+  isUnderMaintenance?: boolean;
   bedType?: string;
   surfaceAreaM2?: number;
   imageUrl?: string;
@@ -50,5 +52,9 @@ export interface UpdateRoomDto {
 
 export interface ToggleRoomAvailabilityDto {
   isAvailable?: boolean;
+}
+
+export interface ToggleMaintenanceDto {
+  isUnderMaintenance?: boolean;
 }
 
