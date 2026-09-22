@@ -370,7 +370,7 @@ export class RoomsService {
       }
 
       const extension = originalName?.split('.')?.pop() || 'jpg';
-      const filename = `vouchers/${booking.bookingId}_${Date.now()}.${extension}`;
+      const filename = `vouchers/${booking.bookingId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
       console.log(`[UploadVoucher] Generando referencia en Firebase: ${filename}`);
       const storageRef = ref(storage, filename);
 
@@ -379,17 +379,25 @@ export class RoomsService {
       const downloadUrl = await getDownloadURL(storageRef);
       console.log(`[UploadVoucher] URL obtenida: ${downloadUrl}`);
 
+      const existingVouchers = booking.voucherFileName
+        ? booking.voucherFileName.split(',').map((v) => v.trim()).filter(Boolean)
+        : [];
+
+      const newVouchers = existingVouchers.length < 2
+        ? [...existingVouchers, downloadUrl]
+        : [existingVouchers[0], downloadUrl];
+
       const updated = await this.prisma.booking.update({
         where: { id: booking.id },
         data: {
-          voucherFileName: downloadUrl,
+          voucherFileName: newVouchers.join(','),
           status: 'PENDING',
         },
         include: {
           room: true,
         },
       });
-      console.log(`[UploadVoucher] Reserva actualizada exitosamente.`);
+      console.log(`[UploadVoucher] Reserva actualizada exitosamente con ${newVouchers.length} voucher(s).`);
       return updated;
     } catch (err: any) {
       console.error(`[UploadVoucher ERROR] Error subiendo voucher a Firebase:`, err);
