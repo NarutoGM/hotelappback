@@ -197,6 +197,9 @@ export class RoomsService {
             guestsCount: true,
             status: true,
             totalAmount: true,
+            voucherFileName: true,
+            voucherSubmitted: true,
+            voucherSecurityCode: true,
           },
           orderBy: {
             checkInDate: 'asc',
