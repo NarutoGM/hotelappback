@@ -1,4 +1,6 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../common/firebase.config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { LoginDto, RegisterDto } from './dto/auth.dto.js';
 import * as crypto from 'crypto';
@@ -41,6 +43,8 @@ export class AuthService {
       email: user.email,
       fullName: user.fullName,
       documentNumber: user.documentNumber,
+      phone: (user as any).phone || 'No registrado',
+      avatarUrl: (user as any).avatarUrl || null,
       role: user.role,
       createdAt: user.createdAt.getTime(),
     };
@@ -48,7 +52,7 @@ export class AuthService {
 
   async register(registerDto: RegisterDto) {
     const email = registerDto.email?.trim().toLowerCase();
-    const { password, fullName, documentNumber, role } = registerDto;
+    const { password, fullName, documentNumber, phone, role } = registerDto;
 
     if (!email || !email.includes('@') || !email.includes('.')) {
       throw new BadRequestException('Formato de correo electrónico inválido.');
@@ -80,8 +84,9 @@ export class AuthService {
         salt,
         fullName: fullName.trim(),
         documentNumber: (documentNumber && documentNumber.trim()) || 'N/A',
+        phone: (phone && phone.trim()) || 'No registrado',
         role: userRole,
-      },
+      } as any,
     });
 
     return {
@@ -89,6 +94,8 @@ export class AuthService {
       email: newUser.email,
       fullName: newUser.fullName,
       documentNumber: newUser.documentNumber,
+      phone: (newUser as any).phone || 'No registrado',
+      avatarUrl: (newUser as any).avatarUrl || null,
       role: newUser.role,
       createdAt: newUser.createdAt.getTime(),
     };
@@ -101,14 +108,87 @@ export class AuthService {
         email: true,
         fullName: true,
         documentNumber: true,
+        phone: true,
+        avatarUrl: true,
         role: true,
         createdAt: true,
-      },
+      } as any,
       orderBy: { createdAt: 'desc' },
     });
-    return users.map((u) => ({
+    return users.map((u: any) => ({
       ...u,
       createdAt: u.createdAt.getTime(),
     }));
+  }
+
+  async uploadAvatar(userId: string, fileBuffer: Buffer, mimeType: string, originalName: string) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new BadRequestException('Usuario no encontrado');
+      }
+
+      const extension = originalName?.split('.')?.pop() || 'jpg';
+      const filename = `avatars/${user.id}_${Date.now()}.${extension}`;
+      const storageRef = ref(storage, filename);
+
+      const bufferData = new Uint8Array(fileBuffer);
+      await uploadBytes(storageRef, bufferData, { contentType: mimeType || 'image/jpeg' });
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      const updated = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          avatarUrl: downloadUrl,
+        } as any,
+      });
+
+      return {
+        id: updated.id,
+        email: updated.email,
+        fullName: updated.fullName,
+        documentNumber: updated.documentNumber,
+        phone: (updated as any).phone || 'No registrado',
+        avatarUrl: (updated as any).avatarUrl || null,
+        role: updated.role,
+        createdAt: updated.createdAt.getTime(),
+      };
+    } catch (err: any) {
+      console.error('[UploadAvatar ERROR]', err);
+      throw new BadRequestException(`Error al subir foto de perfil: ${err?.message || err}`);
+    }
+  }
+
+  async updateProfile(userId: string, data: { fullName?: string; phone?: string; documentNumber?: string }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.fullName ? { fullName: data.fullName.trim() } : {}),
+        ...(data.phone ? { phone: data.phone.trim() } : {}),
+        ...(data.documentNumber ? { documentNumber: data.documentNumber.trim() } : {}),
+      } as any,
+    });
+
+    return {
+      id: updated.id,
+      email: updated.email,
+      fullName: updated.fullName,
+      documentNumber: updated.documentNumber,
+      phone: (updated as any).phone || 'No registrado',
+      avatarUrl: (updated as any).avatarUrl || null,
+      role: updated.role,
+      createdAt: updated.createdAt.getTime(),
+    };
   }
 }
