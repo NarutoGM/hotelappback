@@ -220,6 +220,7 @@ export class RoomsService {
       where: userId ? { userId } : undefined,
       include: {
         room: true,
+        user: true,
       },
       orderBy: {
         createdAt: 'desc',
