@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../common/firebase.config.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -9,10 +10,46 @@ export class RoomsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Expira automáticamente reservas pendientes sin comprobante enviado tras 15 minutos
+   */
+  async expireStalePendingBookings() {
+    try {
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const expired = await this.prisma.booking.updateMany({
+        where: {
+          status: 'PENDING',
+          voucherSubmitted: false,
+          createdAt: {
+            lt: fifteenMinutesAgo,
+          },
+        },
+        data: {
+          status: 'CANCELLED',
+        },
+      });
+
+      if (expired.count > 0) {
+        console.log(`[AutoExpire] Se cancelaron ${expired.count} reserva(s) por exceder los 15 minutos de plazo de pago.`);
+      }
+    } catch (err) {
+      console.error('[AutoExpire Error]', err);
+    }
+  }
+
+  /**
+   * Cron job que se ejecuta cada minuto en segundo plano
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async handleCronExpiration() {
+    await this.expireStalePendingBookings();
+  }
+
+  /**
    * Filtra habitaciones disponibles por Capacidad mínima requerida
    * y por rango de fechas (sin solapamiento de reservas confirmadas/pendientes).
    */
   async searchRooms(query: SearchRoomsQueryDto) {
+    await this.expireStalePendingBookings();
     const minCapacity = query.capacity ? Number(query.capacity) : 1;
     const { checkIn, checkOut } = query;
 
@@ -174,6 +211,7 @@ export class RoomsService {
    * Listar todas las reservas del sistema (para recepción o huésped)
    */
   async getBookings(userId?: string) {
+    await this.expireStalePendingBookings();
     return this.prisma.booking.findMany({
       where: userId ? { userId } : undefined,
       include: {
@@ -369,6 +407,10 @@ export class RoomsService {
         throw new BadRequestException(`Reserva con ID ${id} no encontrada.`);
       }
 
+      if (booking.voucherSubmitted) {
+        throw new BadRequestException('Los comprobantes ya fueron enviados y no se pueden modificar.');
+      }
+
       const extension = originalName?.split('.')?.pop() || 'jpg';
       const filename = `vouchers/${booking.bookingId}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${extension}`;
       console.log(`[UploadVoucher] Generando referencia en Firebase: ${filename}`);
@@ -403,6 +445,75 @@ export class RoomsService {
       console.error(`[UploadVoucher ERROR] Error subiendo voucher a Firebase:`, err);
       throw new BadRequestException(`Error en Firebase Storage: ${err?.message || err}`);
     }
+  }
+
+  /**
+   * Elimina un voucher específico de la reserva (antes de ser enviado)
+   */
+  async deleteBookingVoucher(id: string, index: number) {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        OR: [{ id }, { bookingId: id }],
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException(`Reserva no encontrada.`);
+    }
+
+    if (booking.voucherSubmitted) {
+      throw new BadRequestException('El comprobante ya fue enviado y no puede ser eliminado.');
+    }
+
+    const existingVouchers = booking.voucherFileName
+      ? booking.voucherFileName.split(',').map((v) => v.trim()).filter(Boolean)
+      : [];
+
+    if (index >= 0 && index < existingVouchers.length) {
+      existingVouchers.splice(index, 1);
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        voucherFileName: existingVouchers.length > 0 ? existingVouchers.join(',') : null,
+      },
+      include: {
+        room: true,
+      },
+    });
+    return updated;
+  }
+
+  /**
+   * Bloquea y confirma el envío de los comprobantes adjuntos
+   */
+  async submitBookingVouchers(id: string) {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        OR: [{ id }, { bookingId: id }],
+      },
+    });
+
+    if (!booking) {
+      throw new BadRequestException(`Reserva no encontrada.`);
+    }
+
+    if (!booking.voucherFileName) {
+      throw new BadRequestException('Debes adjuntar al menos un comprobante antes de enviar.');
+    }
+
+    const updated = await this.prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        voucherSubmitted: true,
+        status: 'PENDING',
+      },
+      include: {
+        room: true,
+      },
+    });
+    return updated;
   }
 
   /**

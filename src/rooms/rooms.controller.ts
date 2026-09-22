@@ -143,6 +143,28 @@ export class RoomsController {
   }
 
   /**
+   * DELETE /rooms/bookings/:id/voucher
+   * Elimina un comprobante específico (antes del envío definitivo)
+   */
+  @Delete('bookings/:id/voucher')
+  async deleteBookingVoucher(
+    @Param('id') id: string,
+    @Query('index') index?: string,
+  ) {
+    const idx = index !== undefined ? parseInt(index, 10) : 0;
+    return this.roomsService.deleteBookingVoucher(id, isNaN(idx) ? 0 : idx);
+  }
+
+  /**
+   * POST /rooms/bookings/:id/submit-voucher
+   * Confirma y bloquea los comprobantes adjuntos
+   */
+  @Post('bookings/:id/submit-voucher')
+  async submitBookingVouchers(@Param('id') id: string) {
+    return this.roomsService.submitBookingVouchers(id);
+  }
+
+  /**
    * PATCH /rooms/bookings/:id/status
    */
   @Patch('bookings/:id/status')
