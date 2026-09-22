@@ -1,21 +1,29 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module.js';
 
-let server: any;
+import express from 'express';
+import { ExpressAdapter } from '@nestjs/platform-express';
+
+const server = express();
+let isAppInitialized = false;
+
+async function bootstrapServer() {
+  if (!isAppInitialized) {
+    const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
+    app.enableCors({
+      origin: '*',
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      credentials: true,
+    });
+    await app.init();
+    isAppInitialized = true;
+  }
+  return server;
+}
 
 export default async function handler(req: any, res: any) {
   try {
-    if (!server) {
-      const app = await NestFactory.create(AppModule);
-      app.enableCors({
-        origin: '*',
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-        credentials: true,
-      });
-      await app.init();
-      const expressApp = app.getHttpAdapter().getInstance();
-      server = expressApp;
-    }
+    await bootstrapServer();
     return server(req, res);
   } catch (err: any) {
     console.error('[Vercel Serverless Error]:', err);
